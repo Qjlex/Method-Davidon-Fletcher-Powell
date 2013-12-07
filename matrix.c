@@ -1,26 +1,39 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
+#include "other.h"
 #include "matrix.h"
 
-__inline__ long double* matrix_get_inverse( long double* items, 
-	const unsigned short size )
+inline struct map_type *get_inverse( struct map_type *map )
 {
-	long double determinant;
-	determinant = matrix_get_determinant( items, size );
-	return matrix_multiplicate_on_value( determinant, items, size, size );
+    struct map_type *result;
+    if( map->i_size == 1
+        && map->j_size == 1 )
+    {
+        result = allocate( 2, 2 );
+        result->i_size = 1;
+        result->j_size = 1;
+        __float128 value = *( *( map->memory + 0 ) + 0 );
+        *( *( result->memory + 0 ) + 0 ) = value == 0 ? 0 : powf( value, -1 );
+    }
+    else
+    {
+        __float128 determinant = get_determinant( map );
+        result = multiplicate_on_value( powf( determinant, -1 ), map );
+    }
+    return result;
 }
 
-__inline__ long double matrix_get_determinant( long double *items,
-        const unsigned short size )
+inline __float128 get_determinant( struct map_type *map )
 {
-    long double result;
+    __float128 result;
 
     result = 0;
-    switch( size )
+    switch( map->i_size )
     {
         case 2:
-            result = *( items + get_index( 0, 0, size ) ) * ( *( items + get_index( 1, 1, size ) ) )
-                     - *( items + get_index( 1, 0, size ) ) * ( *( items + get_index( 0, 1, size ) ) );
+            result = *( *( map->memory + 0 ) + 0 ) * ( *( * ( map->memory + 1 ) + 1 ) )
+                     - ( *( * ( map->memory + 1 ) + 0 ) ) * ( *( * ( map->memory + 0 ) + 1 ) );
             break;
 
             /*
@@ -31,176 +44,226 @@ __inline__ long double matrix_get_determinant( long double *items,
     return result;
 }
 
-__inline__ long double matrix_get_euclidean_distance( long double *items
-        const unsigned short size )
+inline void memset_map( struct map_type *map,
+                 __float128 value )
+{
+    int i, j;
+    for( i = 0; i < map->real_size; i++ )
+    {
+        for( j = 0; j < map->real_size; j++ )
+        {
+            *( *( map->memory + i ) + j ) = value;
+        }
+    }
+}
+
+inline struct map_type *allocate( unsigned i_size,
+                           unsigned j_size )
 {
     int i;
-    long double *result;
-    for( result = 0, i = 0; i < size; i++ )
+    struct map_type *result;
+    if( !i_size
+        || !j_size )
     {
-        result += pow( *( items + i ) );
-    }
-    return fabs( sqrt( result ) );
-}
-
-void matrix_transposition( long double *items,
-                           const unsigned short size )
-{
-    int i, j;
-    long double *tmp;
-
-    tmp = ( long double * )malloc( sizeof( long double ) * pow( size, 2 ) );
-    matrix_copy_from_to( item, tmp, size );
-    for( i = 0; i < size; i++ )
-    {
-        for( j = 0; j < size; i++ )
-        {
-            *( items + get_index( i, j, size ) ) = *( tmp + get_index( j, i, size ) );
-        }
-    }
-    free( tmp );
-}
-
-long double *matrix_get_identity_matrix( const unsigned short size )
-{
-    int i, j;
-    long double *result;
-
-    result = ( long double * )malloc( sizeof( long double ) * pow( size, 2 ) );
-    for( i = 0; i < size; i++ )
-    {
-        for( j = 0; j < size; j++ )
-        {
-            *( result + get_index( i, j, size ) ) = 0;
-        }
-        *( result + get_index( i, i, size ) ) = 1;
-    }
-    return result;
-}
-
-void matrix_copy_from_to( long double *items,
-                          long double *items_2,
-                          const unsigned short items_size )
-{
-    int i, j;
-    for( i = 0; i < items_size; i++ )
-    {
-        for( j = 0; j < item_size; j++ )
-        {
-            *( items_2 + get_index( i, j, item_size ) = *( items + get_index( i, j, item_size );
-        }
-    }
-}
-
-__inline__ long double *matrix_subtraction( long double *items,
-        long double *items_2,
-        const unsigned short m,
-        const unsigned short n )
-{
-    long double *tmp, *result;
-    tmp = matrix_multiplicate_on_value( -1, items_2, m, n );
-    result = matrix_addition( items, items_2, m, n );
-    free( tmp );
-    return result;
-}
-
-long double *matrix_addition( long double *items,
-                              long double *items_2,
-                              const unsigned short m,
-                              const unsigned short n )
-{
-    int i, j;
-    long double *result;
-
-    result = ( long double * )malloc( sizeof( long double ) * m * n );
-    for( i = 0; i < m; i++ )
-    {
-        for( j = 0; j < m; j++ )
-        {
-            *( result + get_index( i, j, item_size ) = *( items + get_index( i, j, item_size ) + ( *( items_2 + get_index( i, j, item_size ) ) );
-        }
-    }
-    return result;
-}
-
-long double *matrix_multiplicate( long double *items,
-                                  const unsigned short items_m
-                                  const unsigned short items_n
-                                  long double *items_2,
-                                  const unsigned short items_2_n
-                                  const unsigned short items_2_k )
-{
-    int i, j, k;
-    long double *result;
-    long double sum_tmp;
-
-    if( items_n != items_2_n )
-    {
-        printf( "Не правильное умножение\n" );
         return NULL;
     }
 
-    result = ( long double * )malloc( sizeof( long double ) * items_m * items_2_k );
-    for( i = 0; i < items_m; i++ )
+    result = ( struct map_type * )malloc( sizeof( struct map_type ) );
+    result->i_size = i_size;
+    result->j_size = j_size;
+    result->real_size = i_size > j_size ? i_size : j_size;
+    result->memory = ( __float128 ** )malloc( sizeof( __float128 * ) * result->real_size );
+    for( i = 0; i < result->real_size; i++ )
     {
-        for( j = 0; j < items_2_k; j++ )
-        {
-            sum_tmp = 0;
-            for( k = 0; k < items_2_n; k++ )
-            {
-                sum_tmp += *( items + get_index( i, k, item_size ) ) * ( *( items_2 + get_index( k, j, item_size ) ) );
-            }
-            *( result + get_index( i, j, item_size ) = sum_tmp;
-        }
+        *( result->memory + i ) = ( __float128 * )malloc( sizeof( __float128 ) * result->real_size );
     }
+    memset_map( result, 0 );
     return result;
 }
 
-long double *matrix_multiplicate_vector_on_vector( long double *items,
-        const unsigned short items_size
-        long double *items_2,
-        const unsigned short items_2_size )
+inline void deallocate( struct map_type *map )
 {
-    int i, j, k;
-    long double *result;
-    long double sum_tmp;
-
-    if( items_n != items_2_n )
+    int i;
+    for( i = 0; i < map->real_size; i++ )
     {
-        printf( "Не правильное умножение\n" );
-        return NULL;
+        free( *( map->memory + i ) );
     }
+    free( map->memory );
+    free( map );
+}
 
-    result = ( long double * )malloc( sizeof( long double ) * items_size * items_2_size );
-    for( i = 0; i < items_m; i++ )
+inline __float128 get_euclidean_distance( struct map_type *map )
+{
+    int i;
+    __float128 result;
+    result = 0;
+
+    if( map->i_size == 1 )
     {
-        for( j = 0; j < items_2_size; j++ )
+        for( i = 0; i < map->j_size; i++ )
         {
-            sum_tmp = 0;
-            for( k = 0; k < items_2_size; k++ )
-            {
-                sum_tmp += *( items + get_index( i, k, item_size ) ) * ( *( items_2 + get_index( k, j, item_size ) ) );
-            }
-            *( result + get_index( i, j, item_size ) = sum_tmp;
+            result += fabs(*( *( map->memory + 0 ) + i ));
+        }
+    }
+    else if( map->j_size == 1 )
+    {
+        for( i = 0; i < map->i_size; i++ )
+        {
+            result += fabs(*( *( map->memory + i ) + 0 ));
         }
     }
     return result;
 }
 
-long double *matrix_multiplicate_on_value( long double value,
-        long double *items,
-        const unsigned short m,
-        const unsigned short n )
+inline struct map_type *clone( struct map_type *map )
 {
     int i, j;
-    long double *result;
-
-    result = ( long double * )malloc( sizeof( long double ) * m * n );
-    for( i = 0; i < m; i++ )
+    struct map_type *result;
+    result = allocate( map->i_size, map->j_size );
+    for( i = 0; i < map->real_size; i++ )
     {
-        for( j = 0; j < n; j++ )
+        for( j = 0; j < map->real_size; j++ )
         {
-            *( result + get_index( i, j, item_size ) ) *= value;
+            *( *( result->memory + i ) + j ) = *( *( map->memory + i ) + j );
+        }
+    }
+    return result;
+}
+
+inline void memcpy_map( struct map_type *from,
+                 struct map_type *to )
+{
+    int i, j;
+    for( i = 0; i < from->i_size; i++ )
+    {
+        for( j = 0; j < from->j_size; j++ )
+        {
+            *( *( to->memory + i ) + j ) = *( *( from->memory + i ) + j );
+        }
+    }
+}
+
+inline struct map_type *transposition( struct map_type *map )
+{
+    int i, j;
+    struct map_type *result;
+    result = clone( map );
+    for( i = 0; i < result->real_size; i++ )
+    {
+        for( j = 0; j < result->real_size; j++ )
+        {
+            *( *( result->memory + i ) + j ) = *( *( map->memory + j ) + i );
+        }
+    }
+    result->i_size = map->j_size;
+    result->j_size = map->i_size;
+    return result;
+}
+
+inline struct map_type *get_identity_matrix( unsigned short size )
+{
+    int i;
+    struct map_type *result;
+    result = allocate( size, size );
+    for( i = 0; i < size; i++ )
+    {
+        *( *( result->memory + i ) + i ) = 1;
+    }
+    return result;
+}
+
+inline struct map_type *subtraction( struct map_type *map,
+                              struct map_type *map_2 )
+{
+    struct map_type *tmp, *result;
+    tmp = multiplicate_on_value( -1, map_2 );
+    result = addition( map, tmp );
+    deallocate( tmp );
+    return result;
+}
+
+inline struct map_type *addition( struct map_type *map,
+                           struct map_type *map_2 )
+{
+    int i, j;
+    struct map_type *result;
+    result = allocate( map->i_size, map->j_size );
+    if( map_2->i_size == 1
+        && map_2->j_size == 1 )
+    {
+        for( i = 0; i < result->i_size; i++ )
+        {
+            for( j = 0; j < result->j_size; j++ )
+            {
+                *( *( result->memory + i ) + j ) = *( *( map->memory + i ) + j ) + ( *( *( map_2->memory + 0 ) + 0 ) );
+            }
+        }
+    }
+    else if( map->i_size == map_2->i_size
+             && map->j_size == map_2->j_size )
+    {
+        for( i = 0; i < result->i_size; i++ )
+        {
+            for( j = 0; j < result->j_size; j++ )
+            {
+                *( *( result->memory + i ) + j ) = *( *( map->memory + i ) + j ) + ( *( *( map_2->memory + i ) + j ) );
+            }
+        }
+    }
+    else
+    {
+        for( i = 0; i < result->i_size; i++ )
+        {
+            for( j = 0; j < result->j_size; j++ )
+            {
+                *( *( result->memory + i ) + j ) = *( *( map->memory + i ) + j ) + ( *( *( map_2->memory + j ) + i ) );
+            }
+        }
+    }
+    return result;
+}
+
+inline struct map_type *multiplicate( struct map_type *map,
+                               struct map_type *map_2 )
+{
+    int i, j, k;
+    __float128 sum_tmp;
+    struct map_type *result;
+
+    if( ( map->i_size == 1 && map->j_size == 1 )
+        && ( map_2->i_size > 1 || map_2->j_size > 1 ) )
+    {
+        result = multiplicate_on_value( *( *( map->memory + 0 ) + 0 ), map_2 );
+    }
+    else
+    {
+        result = allocate( map->i_size, map_2->j_size );
+        for( i = 0; i < map->i_size; i++ )
+        {
+            for( j = 0; j < map_2->j_size; j++ )
+            {
+                for( sum_tmp = 0, k = 0; k < map->j_size; k++ )
+                {
+                    sum_tmp += *( *( map->memory + i ) + k ) * ( *( *( map_2->memory + k ) + j ) );
+                }
+                *( *( result->memory + i ) + j ) = sum_tmp;
+            }
+        }
+    }
+    return result;
+}
+
+inline struct map_type *multiplicate_on_value( __float128 value,
+                                        struct map_type *map )
+{
+    int i, j;
+    struct map_type *result;
+    result = clone( map );
+    for( i = 0; i < result->i_size; i++ )
+    {
+        for( j = 0; j < result->j_size; j++ )
+        {
+            *( *( result->memory + i ) + j ) *= value;
         }
     }
     return result;
